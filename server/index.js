@@ -45,14 +45,6 @@ app.get("/get", (req, res) => {
   });
 });
 
-app.post("/insert", (req, res) => {
-  const imageName = req.body.imageName;
-  const insertQuery = "INSERT INTO images (image_name) values (?)";
-  db.query(insertQuery, [imageName], (err, result) => {
-    console.log(result);
-  });
-});
-
 app.delete("/delete/:imageId", (req, res) => {
   const imageId = req.params.imageId;
   const deleteQuery = "Delete from images where id = ?";
@@ -68,7 +60,13 @@ app.post("/upload", function (req, res) {
     error.httpStatusCode = 400;
     console.log(error)
   }
+  const imageName = file.filename;
+  const route = file.path;
+  const insertQuery = "INSERT INTO images (image_name, route) values (?, ?)";
+  db.query(insertQuery, [imageName, route], (err, result) => {
+    console.log(result)});
   res.send(file);
   console.log(req.file, req.body);
 });
+
 app.listen("3001", () => {});
