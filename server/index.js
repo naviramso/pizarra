@@ -4,7 +4,6 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 
-
 const db = mysql.createPool({
   host: "mysql_db",
   user: "MYSQL_USER",
@@ -13,36 +12,35 @@ const db = mysql.createPool({
 });
 
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, "images"),
+  destination: path.join(__dirname, "/public/images"),
   filename: function (req, file, cb) {
     cb(null, `${file.fieldname}-${Date.now()}.${file.mimetype.split("/")[1]}`);
   },
 });
 
 const app = express();
-const http = require('http');
+const http = require("http");
 const server = http.createServer(app);
-const { Server } = require("socket.io");
-const io = new Server(server, {
+const io = require("socket.io")(server, {
   cors: {
-    origin: "*" ,
+    origin: "*",
     methods: ["GET", "POST"],
+    allowedHeaders: ["my-custom-header"],
+    credentials: true,
   },
 });
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   multer({
     storage,
-    dest: path.join(__dirname, "images"),
+    dest: path.join(__dirname, "public/images"),
   }).single("image")
 );
 
-
-// const upload = multer({ storage: storage });
-// app.use(express.static(path.join(_dirname, "/Images/")));
-// app.use("/", require("./Images"));
+app.use(express.static("public"));
 
 app.get("/", (req, res) => {
   res.send("Hi there");
@@ -68,27 +66,28 @@ app.post("/upload", function (req, res) {
   if (!file) {
     const error = new Error("Please upload a file");
     error.httpStatusCode = 400;
-    console.log(error)
+    console.log(error);
   }
   const imageName = file.filename;
   const route = file.path;
   const insertQuery = "INSERT INTO images (image_name, route) values (?, ?)";
   db.query(insertQuery, [imageName, route], (err, result) => {
-    console.log(result)});
+    console.log(result);
+  });
   res.send(file);
   console.log(req.file, req.body);
 });
 
 //var sockets = io.listen(server);
-io.on('connection', (socket) => {
-  console.log('a user connected');
-  console.log(socket.id)
+io.on("connection", (socket) => {
+  console.log("a user connected");
+  console.log(socket.id);
 
-  socket.on("message",(message)=>{
-    console.log(message)
-    socket.broadcast.emit("message",message);
-  })
+  socket.on("message", (message) => {
+    console.log(message);
+    socket.broadcast.emit("message", message);
+  });
 });
 
 server.listen("3001", () => {});
-console.log("server started on port ...")
+console.log("server started on port ...");
