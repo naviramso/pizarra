@@ -4,6 +4,7 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 
+
 const db = mysql.createPool({
   host: "mysql_db",
   user: "MYSQL_USER",
@@ -19,6 +20,15 @@ const storage = multer.diskStorage({
 });
 
 const app = express();
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    origin: "*" ,
+    methods: ["GET", "POST"],
+  },
+});
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -69,4 +79,16 @@ app.post("/upload", function (req, res) {
   console.log(req.file, req.body);
 });
 
-app.listen("3001", () => {});
+//var sockets = io.listen(server);
+io.on('connection', (socket) => {
+  console.log('a user connected');
+  console.log(socket.id)
+
+  socket.on("message",(message)=>{
+    console.log(message)
+    socket.broadcast.emit("message",message);
+  })
+});
+
+server.listen("3001", () => {});
+console.log("server started on port ...")
