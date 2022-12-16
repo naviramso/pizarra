@@ -4,6 +4,8 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 
+var usuarios=[];
+
 const db = mysql.createPool({
   host: "mysql_db",
   user: "MYSQL_USER",
@@ -21,7 +23,16 @@ const storage = multer.diskStorage({
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
-
+const { Server } = require("socket.io");
+const { emit } = require("process");
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["my-custom-header"],
+    credentials: true,
+  },
+});
 
 app.use(cors());
 app.use(express.json());
@@ -33,12 +44,7 @@ app.use(
   }).single("image")
 );
 
-const io = require("socket.io")(server,{
-  cors: {
-    origin: "*",
-  },
-}
-);
+
 
 app.use(express.static("public"));
 
@@ -79,15 +85,40 @@ app.post("/upload", function (req, res) {
 });
 
 //var sockets = io.listen(server);
-io.on("connection", (socket) => {
-  console.log("a user connected");
-  console.log(socket.id);
+io.on('connection', (socket) => {
 
-  socket.on("message", (message) => {
-    console.log(message);
-    socket.broadcast.emit("message", message);
-  });
+  socket.on("id",(id)=>{
+    socket.join(id); 
+    usuarios.push({usuario:socket.id,rom:id});
+    console.log(usuarios)
+    io.to(id).emit("usuarios",usuarios.filter(item=>{return item.rom==id}))
+  })
+
+  console.log('a user connected');
+  //agregarUsuario(socket.id);
+  //socket.broadcast.emit("usuarios",usuarios);
+  socket.on("message",(message)=>{
+    //console.log(message)
+   // console.log(message.id)
+    socket.to(message.id).emit("message",message);
+  })
+  socket.on("disconnect",()=>{
+    console.log("hola")
+    const room=eliminar(socket.id)
+    socket.to(room).emit("usuarios",usuarios.filter(item=>{return item.rom==room}));
+  })
 });
+function eliminar(id){
+  let rom;
+  for(var i=0;i<usuarios.length;i++){
+    if(id==usuarios[i].usuario){
+      rom=usuarios[i].rom;
+      usuarios.splice(i,1);
+      i=usuarios.length;
+    }
+  }
+  return rom;
+}
 
 server.listen("3001", () => {});
 console.log("server started on port ...");
