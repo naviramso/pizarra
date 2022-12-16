@@ -21,14 +21,7 @@ const storage = multer.diskStorage({
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
-const io = require("socket.io")(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-    allowedHeaders: ["my-custom-header"],
-    credentials: true,
-  },
-});
+
 
 app.use(cors());
 app.use(express.json());
@@ -38,6 +31,13 @@ app.use(
     storage,
     dest: path.join(__dirname, "public/images"),
   }).single("image")
+);
+
+const io = require("socket.io")(server,{
+  cors: {
+    origin: "*",
+  },
+}
 );
 
 app.use(express.static("public"));
@@ -69,7 +69,7 @@ app.post("/upload", function (req, res) {
     console.log(error);
   }
   const imageName = file.filename;
-  const route = file.path;
+  const route = "/api/images/"+imageName;
   const insertQuery = "INSERT INTO images (image_name, route) values (?, ?)";
   db.query(insertQuery, [imageName, route], (err, result) => {
     console.log(result);
