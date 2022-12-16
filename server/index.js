@@ -4,7 +4,7 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 
-var usuarios=[];
+var usuarios = [];
 
 const db = mysql.createPool({
   host: "mysql_db",
@@ -44,8 +44,6 @@ app.use(
   }).single("image")
 );
 
-
-
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
@@ -75,7 +73,7 @@ app.post("/upload", function (req, res) {
     console.log(error);
   }
   const imageName = file.filename;
-  const route = "/api/images/"+imageName;
+  const route = "/api/images/" + imageName;
   const insertQuery = "INSERT INTO images (image_name, route) values (?, ?)";
   db.query(insertQuery, [imageName, route], (err, result) => {
     console.log(result);
@@ -85,36 +83,45 @@ app.post("/upload", function (req, res) {
 });
 
 //var sockets = io.listen(server);
-io.on('connection', (socket) => {
+io.on("connection", (socket) => {
+  socket.on("id", (id) => {
+    socket.join(id);
+    usuarios.push({ usuario: socket.id, rom: id });
+    console.log(usuarios);
+    io.to(id).emit(
+      "usuarios",
+      usuarios.filter((item) => {
+        return item.rom == id;
+      })
+    );
+  });
 
-  socket.on("id",(id)=>{
-    socket.join(id); 
-    usuarios.push({usuario:socket.id,rom:id});
-    console.log(usuarios)
-    io.to(id).emit("usuarios",usuarios.filter(item=>{return item.rom==id}))
-  })
-
-  console.log('a user connected');
+  console.log("a user connected");
   //agregarUsuario(socket.id);
   //socket.broadcast.emit("usuarios",usuarios);
-  socket.on("message",(message)=>{
+  socket.on("message", (message) => {
     //console.log(message)
-   // console.log(message.id)
-    socket.to(message.id).emit("message",message);
-  })
-  socket.on("disconnect",()=>{
-    console.log("hola")
-    const room=eliminar(socket.id)
-    socket.to(room).emit("usuarios",usuarios.filter(item=>{return item.rom==room}));
-  })
+    // console.log(message.id)
+    socket.to(message.id).emit("message", message);
+  });
+  socket.on("disconnect", () => {
+    console.log("hola");
+    const room = eliminar(socket.id);
+    socket.to(room).emit(
+      "usuarios",
+      usuarios.filter((item) => {
+        return item.rom == room;
+      })
+    );
+  });
 });
-function eliminar(id){
+function eliminar(id) {
   let rom;
-  for(var i=0;i<usuarios.length;i++){
-    if(id==usuarios[i].usuario){
-      rom=usuarios[i].rom;
-      usuarios.splice(i,1);
-      i=usuarios.length;
+  for (var i = 0; i < usuarios.length; i++) {
+    if (id == usuarios[i].usuario) {
+      rom = usuarios[i].rom;
+      usuarios.splice(i, 1);
+      i = usuarios.length;
     }
   }
   return rom;
