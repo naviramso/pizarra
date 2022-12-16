@@ -88,33 +88,60 @@ io.on("connection", (socket) => {
     socket.join(id);
     usuarios.push({ usuario: socket.id, rom: id });
     console.log(usuarios);
-    io.to(id).emit(
-      "usuarios",
-      usuarios.filter((item) => {
-        return item.rom == id;
-      })
-    );
-  });
+    const auxUsuarios=usuarios.filter((item) => {
+      return item.rom == id;
+    })
+   
 
+   /* if(auxUsuarios.length>1){
+      socket.to(auxUsuarios[0].usuario).emit("canvas",socket.id)
+    }*/
+
+    io.to(id).emit(
+      "usuarios",auxUsuarios
+    );
+
+  });
   console.log("a user connected");
-  //agregarUsuario(socket.id);
-  //socket.broadcast.emit("usuarios",usuarios);
+
+ 
   socket.on("message", (message) => {
     //console.log(message)
     // console.log(message.id)
     socket.to(message.id).emit("message", message);
   });
+
+  socket.on("newAdmin",(user)=>{
+    let room=eliminar(user.usuario);
+    usuarios.unshift(user)
+    let usu=usuarios.filter((item) => {
+      return item.rom == room;
+    });
+    
+    socket.to(room).emit("usuarios",usu);
+    socket.to(user.usuario).emit("admin",true);
+  })
+
   socket.on("disconnect", () => {
-    console.log("hola");
+    
     const room = eliminar(socket.id);
-    socket.to(room).emit(
-      "usuarios",
-      usuarios.filter((item) => {
-        return item.rom == room;
-      })
-    );
+    let usu =agregarAdmin(socket,room)
+    socket.to(room).emit("usuarios",usu);
   });
 });
+
+function agregarAdmin(socket,room){
+  let usu=usuarios.filter((item) => {
+    return item.rom == room;
+  });
+  console.log(usu);
+    if (usu.length!=0){
+      console.log("hola"+usu[0].usuario);
+      socket.to(usu[0].usuario).emit("admin",true);
+    }
+    return usu;
+}
+
 function eliminar(id) {
   let rom;
   for (var i = 0; i < usuarios.length; i++) {
